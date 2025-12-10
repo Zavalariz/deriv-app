@@ -89,8 +89,7 @@
     "scripts": {
         "analyze:build": "nx run-many --target=analyze:build",
         "analyze:stats": "nx run-many --target=analyze:stats",
-        "build:all": "nx build @deriv/components --skip-nx-cache && nx build @deriv/account  --skip-nx-cache && nx build @deriv/bot-web-ui --skip-nx-cache && nx build @deriv/trader --skip-nx-cache && nx run-many --target=build",
-        "build:one": "f () { nx build @deriv/$1 $2 ;}; f",
+        "build:all": "./node_modules/.bin/nx build @deriv/components --skip-nx-cache && ./node_modules/.bin/nx build @deriv/account --skip-nx-cache && ./node_modules/.bin/nx build @deriv/bot-web-ui --skip-nx-cache && ./node_modules/.bin/nx build @deriv/trader --skip-nx-cache && ./node_modules/.bin/nx run-many --target=build","build:one": "f () { nx build @deriv/$1 $2 ;}; f",
         "build:since": "nx affected --target=build",
         "test:eslint-all": "nx run-many --target=test:eslint",
         "test:eslint-one": "f () { nx test @deriv/$1 --target=test:eslint ;}; f",
