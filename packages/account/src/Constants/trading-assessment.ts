@@ -1,1 +1,0 @@
-export const MAX_QUESTION_TEXT_LENGTH = 90;

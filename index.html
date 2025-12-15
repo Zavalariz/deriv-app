@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Trader Solidario - Plataforma de Trading</title>
+    
+    <style>
+        /* ESTILOS INSPIRADOS EN MARKETVIEW (DARK MODE) */
+        :root {
+            --color-primary: #1e1e1e; /* Fondo principal oscuro */
+            --color-secondary: #252526; /* Contenedores/Paneles */
+            --color-text: #cccccc; /* Texto principal */
+            --color-highlight: #00bcd4; /* Azul cian para enlaces/detalles */
+            --color-green: #00cc66; /* Verde moderno para CALL (Ganancia) */
+            --color-red: #ff3333; /* Rojo moderno para PUT (Pérdida) */
+            --color-border: #333333; /* Bordes */
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--color-primary); 
+            padding: 20px;
+            color: var(--color-text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            width: 100%;
+            max-width: 900px; 
+            margin: 0 auto;
+            background: var(--color-secondary);
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+        h1 {
+            text-align: center;
+            font-size: 1.8em;
+            margin-bottom: 25px;
+            line-height: 1.3;
+            color: white;
+        }
+        .logo-part {
+            color: var(--color-highlight);
+            font-weight: bold;
+        }
+        
+        /* Estilos de Input y Labels */
+        label {
+            display: block;
+            margin-top: 15px;
+            margin-bottom: 5px;
+            font-weight: normal;
+            font-size: 0.9em;
+            color: var(--color-text);
+        }
+        input[type="number"] {
+            width: 95%;
+            padding: 10px;
+            background-color: var(--color-primary);
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            font-size: 1em;
+            color: white;
+            box-sizing: border-box; 
+            transition: border-color 0.3s;
+        }
+        input[type="number"]:focus {
+            border-color: var(--color-highlight);
+            outline: none;
+        }
+        
+        /* Controles de Trading */
+        .control-group {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: var(--color-primary);
+            border-radius: 6px;
+            border: 1px solid var(--color-border);
+        }
+        .control-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+        }
+        .control-row > div {
+            flex: 1;
+        }
+        
+        /* Botones de Operación (CALL/PUT) */
+        .trade-button-call, .trade-button-put {
+            width: 100%;
+            padding: 15px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1.3em;
+            font-weight: bold;
+            transition: background-color 0.3s, transform 0.1s;
+        }
+        .trade-button-call {
+            background-color: var(--color-green);
+            color: white;
+        }
+        .trade-button-put {
+            background-color: var(--color-red);
+            color: white;
+        }
+        .trade-button-call:hover { background-color: #00b359; }
+        .trade-button-put:hover { background-color: #e62e2e; }
+        .trade-button-call:active, .trade-button-put:active { transform: translateY(1px); }
+
+        /* Botón de Conexión (Login OAUTH) */
+        .connect-button {
+            width: 100%;
+            padding: 14px;
+            margin-top: 30px;
+            background-color: var(--color-highlight); 
+            color: #1e1e1e; /* Texto oscuro sobre cian */
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1.2em;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        .connect-button:hover {
+            background-color: #00a0b2;
+        }
+
+        /* Área de Mensajes (Output) */
+        #outputTrade, #outputLogin { 
+            background-color: var(--color-primary);
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            margin-top: 10px;
+            border-left: 5px solid var(--color-highlight);
+            overflow-x: auto; 
+            min-height: 50px; 
+            color: white;
+            font-size: 0.9em;
+        }
+        
+        /* Otros */
+        .hidden-view { display: none; }
+        #chartContainer {
+            margin-top: 15px;
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+        }
+        .status-connected {
+            font-weight: bold; 
+            color: var(--color-green);
+            margin-bottom: 20px;
+        }
+        .status-loading {
+            /* Estilo para mensajes de "espera" */
+            font-style: italic;
+            color: #ffc107; /* Amarillo de advertencia */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        <div id="loginView" class="hidden-view">
+            <h1>
+                Acceso a Plataforma 
+                <span style="color: white; font-weight: normal;">Trader</span>
+                <span class="logo-part">Solidario</span>
+            </h1>
+
+            <p style="text-align: center; margin-bottom: 30px; color: var(--color-text);">
+                ¿Eres nuevo? 
+                <a href="https://www.binary.com/en/user/signup_start.html?app_id=1089" 
+                   target="_blank" 
+                   style="color: var(--color-highlight); font-weight: bold; text-decoration: none;">
+                    ➡️ Regístrate Gratis en Deriv
+                </a>
+            </p>
+
+            <p style="text-align: center; margin-bottom: 15px;">
+                Inicia sesión con tus credenciales de Deriv de forma segura.
+            </p>
+            
+            <button class="connect-button" onclick="redirectToDerivLogin()">
+                Iniciar Sesión con Deriv 🔐
+            </button>
+
+            <h2>Estado del Sistema</h2>
+            <pre id="outputLogin">Inicie sesión usando el botón 'Iniciar Sesión con Deriv'.</pre>
+        </div>
+
+        <div id="tradingView" class="hidden-view">
+            <h1>
+                Plataforma de Trading 
+                <span style="color: white; font-weight: normal;">Trader</span>
+                <span class="logo-part">Solidario</span>
+            </h1>
+            
+            <p class="status-connected">✅ CONECTADO: <span id="accountDisplay"></span></p>
+
+            <div class="control-row">
+                <div style="flex: 2;">
+                    <h2 style="margin-top: 0;">Gráfico de Precios (Volatilidad 100)</h2>
+                    <div id="chartContainer" style="height: 350px; width: 100%;"></div>
+                </div>
+
+                <div style="flex: 1;">
+                    <h2 style="margin-top: 0;">Controles</h2>
+                    <div class="control-group">
+                        <label for="amountInput">Monto a Operar (USD):</label>
+                        <input type="number" id="amountInput" value="10.00" min="0.35" step="0.01">
+                        
+                        <label for="durationInput">Duración (Ticks):</label>
+                        <input type="number" id="durationInput" value="5" min="5">
+
+                        <label style="margin-top: 25px;">Tipo de Contrato:</label>
+                        <button class="trade-button-call" onclick="sendTrade('CALL')">⬆️ CALL</button>
+                        <button class="trade-button-put" onclick="sendTrade('PUT')">⬇️ PUT</button>
+                    </div>
+
+                    <h2>Resultado de la Operación</h2>
+                    <pre id="outputTrade">Esperando la primera operación...</pre>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/@deriv/deriv-chart-app@0.2.2/dist/main.js"></script>
+
+    <script>
+        // **** CAMBIO CLAVE: VOLVEMOS A NULL para que funcione el login ****
+        let globalApiToken = null; 
+        let isConnected = false;
+        let pollingIntervalId = null; 
+
+        // --- FUNCIÓN PARA INICIALIZAR EL GRÁFICO ---
+        function initializeChart() {
+            if (!globalApiToken) return;
+            
+            if (typeof DerivChart === 'undefined') {
+                document.getElementById('outputTrade').textContent = "⚠️ Error: La librería de gráficos no se ha cargado. Recargue la página para reintentar.";
+                return;
+            }
+            
+            const accessToken = globalApiToken; 
+            const symbol = 'R_100'; // Volatility 100 Index
+
+            new DerivChart({
+                'symbol': symbol,
+                'accessToken': accessToken,
+                'containerId': 'chartContainer', 
+                'theme': 'dark', 
+                'language': 'ES',
+                'granularity': 60, // 1 minuto
+                'isMobile': false,
+                'enableNavigation': false 
+            });
+        }
+
+        // --- FUNCIÓN DE REDIRECCIÓN A DERIV ---
+        function redirectToDerivLogin() {
+            const APP_ID = 116768;
+            // Usamos la URL HTTPS de ngrok que registró en Deriv
+            const REDIRECT_URI = 'https://modiolar-percussively-enrique.ngrok-free.app'; 
+            const SCOPE = 'read,trade'; 
+            
+            const derivAuthUrl = `https://oauth.deriv.com/oauth2/authorize?app_id=${APP_ID}&scope=${SCOPE}&redirect_uri=${REDIRECT_URI}`;
+            
+            window.location.replace(derivAuthUrl);
+        }
+
+        // --- FUNCIÓN PRINCIPAL DE AUTENTICACIÓN Y CHECK DE TOKEN ---
+        // ESTA ES LA FUNCIÓN RESTAURADA QUE BUSCA EL TOKEN DESPUÉS DE LA REDIRECCIÓN DE DERIV
+        function checkUrlAndStartSession() {
+            // Deriv devuelve el token en el 'hash' (#) de la URL
+            const hash = window.location.hash;
+
+            if (hash) {
+                // Quitamos el # y parseamos los parámetros
+                const params = new URLSearchParams(hash.substring(1));
+                // Deriv usa 'token' o 'token1' si hay múltiples cuentas, pero el JS de la librería chart usa el primer token de la URL.
+                const token = params.get('token') || params.get('token1'); 
+            
+                if (token) {
+                    // Limpia el token de la URL para que no aparezca en la barra de direcciones
+                    history.replaceState({}, document.title, window.location.pathname);
+                    globalApiToken = token;
+                    
+                    const outputLogin = document.getElementById('outputLogin');
+                    outputLogin.textContent = "✅ Token de Deriv capturado. Intentando conexión al servidor...";
+                    outputLogin.style.borderLeftColor = '#00cc66';
+
+                    // Llama al backend para autenticarse y obtener el saldo
+                    authenticateBackend(token, outputLogin);
+                    
+                } else if (params.get('error')) {
+                    // Muestra errores si Deriv los devuelve
+                    document.getElementById('outputLogin').textContent = `❌ Error de Autenticación: ${params.get('error_description')}`;
+                    document.getElementById('outputLogin').style.borderLeftColor = 'var(--color-red)';
+                }
+            } else {
+                // Si no hay token en la URL, muestra la vista de login
+                document.getElementById('loginView').classList.remove('hidden-view');
+            }
+        }
+        
+        // Función auxiliar que maneja la comunicación con el backend (API /api/connect)
+        function authenticateBackend(token, outputLogin) {
+            fetch('/api/connect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ apiToken: token }) 
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => { throw new Error(data.message || `Error HTTP ${response.status}`); });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'success') {
+                    isConnected = true;
+                    document.getElementById('loginView').classList.add('hidden-view');
+                    document.getElementById('tradingView').classList.remove('hidden-view');
+                    
+                    document.getElementById('accountDisplay').textContent = `${data.account_id} (Saldo: $${data.balance.toFixed(2)})`;
+                    document.getElementById('outputTrade').textContent = `✅ Conexión establecida. Saldo: $${data.balance.toFixed(2)}. Lista para operar.`;
+                    document.getElementById('outputTrade').style.borderLeftColor = 'var(--color-green)';
+
+                    // Inicializa el gráfico
+                    setTimeout(initializeChart, 500); 
+
+                } else {
+                    outputLogin.textContent = `❌ Error de Login: ${data.message}`;
+                    outputLogin.style.borderLeftColor = 'var(--color-red)';
+                }
+            })
+            .catch(error => {
+                outputLogin.textContent = "❌ Error de conexión al servidor: " + error.message;
+                outputLogin.style.borderLeftColor = 'var(--color-red)';
+            });
+        }
+        
+        // Función para enviar la Operación (CALL/PUT)
+        function sendTrade(contractType) {
+            if (!isConnected || !globalApiToken) {
+                document.getElementById('outputTrade').textContent = "❌ Error: Sesión no activa. Vuelva a iniciar sesión.";
+                document.getElementById('outputTrade').style.borderLeftColor = 'var(--color-red)';
+                return;
+            }
+            
+            // Detener cualquier polling anterior
+            if (pollingIntervalId) {
+                clearInterval(pollingIntervalId);
+            }
+
+            const outputTrade = document.getElementById('outputTrade');
+            const amount = parseFloat(document.getElementById('amountInput').value);
+            const duration = parseInt(document.getElementById('durationInput').value);
+            
+            if (isNaN(amount) || amount < 0.35 || isNaN(duration) || duration < 5) {
+                outputTrade.textContent = "❌ Error: Monto mínimo $0.35 y Duración mínima 5 ticks.";
+                outputTrade.style.borderLeftColor = 'var(--color-red)';
+                return;
+            }
+            
+            outputTrade.textContent = `➡️ Iniciando operación ${contractType} de $${amount.toFixed(2)} por ${duration} ticks. Esperando respuesta...`;
+            outputTrade.style.borderLeftColor = 'var(--color-highlight)';
+            outputTrade.style.fontWeight = 'normal';
+
+            fetch('/api/trade', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    apiToken: globalApiToken, 
+                    amount: amount,
+                    duration: duration,
+                    contractType: contractType
+                }) 
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => { throw new Error(data.message || `Error HTTP ${response.status}`); });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'success') {
+                    outputTrade.textContent = `🎉 Compra ${contractType} iniciada con éxito. Esperando resultado final...`;
+                    outputTrade.style.borderLeftColor = 'var(--color-green)';
+                    // Iniciar el polling para obtener el resultado
+                    pollForResult(outputTrade); 
+                } else {
+                    outputTrade.textContent = `❌ Error en la operación: ${data.message}`;
+                    outputTrade.style.borderLeftColor = 'var(--color-red)';
+                }
+            })
+            .catch(error => {
+                outputTrade.textContent = "❌ Error al enviar la operación al servidor: " + error.message;
+                outputTrade.style.borderLeftColor = 'var(--color-red)';
+            });
+        }
+
+        // Función de Polling (Verificación periódica del resultado)
+        function pollForResult(outputElement) {
+            let dots = 0;
+            const initialText = outputElement.textContent; 
+
+            pollingIntervalId = setInterval(async () => {
+                const response = await fetch('/api/result');
+                const data = await response.json();
+                
+                if (data.result) {
+                    // Contrato finalizado
+                    clearInterval(pollingIntervalId); 
+                    pollingIntervalId = null;
+                    
+                    outputElement.textContent = data.result;
+                    
+                    const isWinning = data.result.includes('GANANCIA');
+                    // Cambia el color del borde según el resultado final
+                    outputElement.style.borderLeftColor = isWinning ? 'var(--color-green)' : 'var(--color-red)'; 
+                    outputElement.style.fontWeight = 'bold';
+                    
+                } else {
+                    // Aún esperando, añade puntos suspensivos para indicar actividad
+                    dots = (dots % 3) + 1;
+                    outputElement.textContent = initialText + ".".repeat(dots);
+                }
+            }, 2000); 
+        }
+
+        // **** INICIO DE LA APLICACIÓN: Busca el token en la URL o muestra el login ****
+        document.addEventListener('DOMContentLoaded', checkUrlAndStartSession);
+    </script>
+</body>
+</html>
