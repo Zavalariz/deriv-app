@@ -168,7 +168,7 @@
 <body>
     <div class="container">
         
-        <div id="loginView" class="hidden-view">
+        <div id="loginView" class="">
             <h1>¡Hola GitHub! Riky hizo este cambio a las [HORA ACTUAL]</h1>
             <h1>¡Hola GitHub3! Riky hizo este cambio a las [HORA ACTUAL]</h1>
             <h1>
@@ -267,20 +267,24 @@
             });
         }
 
-        // --- FUNCIÓN DE REDIRECCIÓN A DERIV ---
+        // --- FUNCIÓN DE REDIRECCIÓN A DERIV (CORREGIDA) ---
         function redirectToDerivLogin() {
-            const APP_ID = 116768;
-            // Usamos la URL HTTPS de ngrok que registró en Deriv
-            const REDIRECT_URI = 'https://modiolar-percussively-enrique.ngrok-free.app'; 
+            // Su App ID correcto de 'Trader Solidario Dev' (116785)
+            const APP_ID = 116785; 
+            
+            // La URL HTTPS de AWS Amplify (Su dominio público)
+            const REDIRECT_URI = 'https://master.d2flmkb4yy7otqd1.amplifyapp.com';
+            
             const SCOPE = 'read,trade'; 
             
+            // Construye la URL de autenticación
             const derivAuthUrl = `https://oauth.deriv.com/oauth2/authorize?app_id=${APP_ID}&scope=${SCOPE}&redirect_uri=${REDIRECT_URI}`;
             
+            // Redirige al usuario
             window.location.replace(derivAuthUrl);
         }
 
         // --- FUNCIÓN PRINCIPAL DE AUTENTICACIÓN Y CHECK DE TOKEN ---
-        // ESTA ES LA FUNCIÓN RESTAURADA QUE BUSCA EL TOKEN DESPUÉS DE LA REDIRECCIÓN DE DERIV
         function checkUrlAndStartSession() {
             // Deriv devuelve el token en el 'hash' (#) de la URL
             const hash = window.location.hash;
@@ -288,7 +292,7 @@
             if (hash) {
                 // Quitamos el # y parseamos los parámetros
                 const params = new URLSearchParams(hash.substring(1));
-                // Deriv usa 'token' o 'token1' si hay múltiples cuentas, pero el JS de la librería chart usa el primer token de la URL.
+                // Deriv usa 'token' o 'token1' si hay múltiples cuentas.
                 const token = params.get('token') || params.get('token1'); 
             
                 if (token) {
@@ -301,7 +305,10 @@
                     outputLogin.style.borderLeftColor = '#00cc66';
 
                     // Llama al backend para autenticarse y obtener el saldo
-                    authenticateBackend(token, outputLogin);
+                    // NOTE: Esta parte fallará si no hay un servidor backend activo.
+                    // Si su servidor NO está activo, cambie 'authenticateBackend(token, outputLogin);'
+                    // por 'simulateBackendSuccess(token, outputLogin);' para probar solo el login.
+                    authenticateBackend(token, outputLogin); 
                     
                 } else if (params.get('error')) {
                     // Muestra errores si Deriv los devuelve
@@ -310,7 +317,7 @@
                 }
             } else {
                 // Si no hay token en la URL, muestra la vista de login
-                document.getElementById('loginView').classList.remove('hidden-view');
+                // (Nota: Quitamos hidden-view del loginView para que se muestre por defecto)
             }
         }
         
