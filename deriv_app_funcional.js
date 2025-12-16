@@ -3,9 +3,12 @@ const path = require('path');
 const WebSocket = require('ws');
 
 const app = express();
-const PORT = 3000;
-// APP ID NUMÉRICO real
-const APP_ID = 116768; 
+const PORT = 3000; 
+
+// *************************************************************
+// CORRECCIÓN CLAVE: APP ID 116785 de 'Trader Solidario Dev'
+// *************************************************************
+const APP_ID = 116785; 
 const WS_URL = `wss://ws.binaryws.com/websockets/v3?app_id=${APP_ID}`;
 
 // Variables de estado globales
@@ -13,7 +16,6 @@ let currentAccountId = null;
 let currentAuthToken = null; 
 let ws = null; // Conexión WebSocket
 let contractResult = null; // Almacena el resultado final para /api/result
-let httpResponseSent = false; // Flag para asegurar que solo se envíe una respuesta HTTP por WS
 
 app.use(express.json());
 
@@ -28,7 +30,7 @@ app.post('/api/connect', (req, res) => {
     const authToken = req.body.apiToken;
 
     if (!authToken) {
-        return res.status(400).json({ error: 'Token API no proporcionado.' });
+        return res.status(400).json({ status: 'error', message: 'Token API no proporcionado.' });
     }
 
     // Cierra la conexión WS anterior si existe para empezar limpia
@@ -36,7 +38,6 @@ app.post('/api/connect', (req, res) => {
         ws.close();
     }
     contractResult = null;
-    httpResponseSent = false;
     currentAuthToken = authToken; 
 
     // Inicia una nueva conexión WS para la autenticación
@@ -68,11 +69,11 @@ app.get('/api/result', (req, res) => {
 
 // 5. LÓGICA WS - SOLO PARA AUTENTICACIÓN INICIAL
 function startWebSocketAuth(authToken, httpResponse) {
+    let httpResponseSent = false;
     ws = new WebSocket(WS_URL);
 
     ws.on('open', function open() {
-        const authMessage = JSON.stringify({ authorize: authToken });
-        ws.send(authMessage);
+        ws.send(JSON.stringify({ authorize: authToken }));
         console.log('[BACKEND] 🔑 Enviando solicitud de autenticación...');
     });
 
@@ -107,7 +108,13 @@ function startWebSocketAuth(authToken, httpResponse) {
         } 
     });
 
-    ws.on('error', function error(err) { console.error('[BACKEND] ⚠️ Error WS en Auth:', err.message); });
+    ws.on('error', function error(err) { 
+        console.error('[BACKEND] ⚠️ Error WS en Auth:', err.message); 
+        if (!httpResponseSent) {
+             httpResponse.status(500).json({ status: 'error', message: 'Error de conexión WebSocket en Auth.' });
+             httpResponseSent = true;
+        }
+    });
     ws.on('close', function close() { console.log('[BACKEND] 🛑 Conexión de Auth cerrada.'); });
 }
 
@@ -119,8 +126,7 @@ function startWebSocketTrade(amount, duration, contractType, httpResponse) {
     contractResult = null; // Limpia el resultado anterior para el nuevo trade
 
     ws.on('open', function open() {
-        const authMessage = JSON.stringify({ authorize: currentAuthToken });
-        ws.send(authMessage);
+        ws.send(JSON.stringify({ authorize: currentAuthToken }));
         console.log('[BACKEND] 🔑 Re-autenticando para el Trade...');
     });
 
@@ -169,7 +175,7 @@ function startWebSocketTrade(amount, duration, contractType, httpResponse) {
             
             // Revisa si el contrato ha sido vendido (terminado)
             if (contract.is_sold === 1) {
-                const profit = contract.payout - contract.buy_price;
+                const profit = contract.sell_price - contract.buy_price; 
                 const resultado = profit >= 0 ? 'GANANCIA' : 'PÉRDIDA';
                 
                 // Almacena el resultado para ser consultado por /api/result
@@ -183,14 +189,15 @@ function startWebSocketTrade(amount, duration, contractType, httpResponse) {
                 ws.close();
             }
         }
-        
-        else if (response.msg_type === 'tick') {
-            // Solo imprime los ticks para depuración, la gráfica en el frontend los maneja.
-            // console.log(`[BACKEND] [Tick] R_100: ${response.tick.quote}`);
-        }
     });
     
-    ws.on('error', function error(err) { console.error('[BACKEND] ⚠️ Error WS en Trade:', err.message); });
+    ws.on('error', function error(err) { 
+        console.error('[BACKEND] ⚠️ Error WS en Trade:', err.message); 
+        if (!tradeHttpResponseSent) {
+             httpResponse.status(500).json({ status: 'error', message: 'Error de conexión WebSocket en Trade.' });
+             tradeHttpResponseSent = true;
+        }
+    });
     ws.on('close', function close() { console.log('[BACKEND] 🛑 Conexión de Trade cerrada.'); });
 }
 
@@ -221,7 +228,6 @@ function sendTradeRequests(ws, amount, duration, contractType) {
 // 8. INICIAR EL SERVIDOR WEB
 app.listen(PORT, () => {
     console.log(`\n======================================================`);
-    // URL HTTPS de ngrok configurada correctamente
-    console.log(`🚀 SERVIDOR WEB INICIADO: Abre https://modiolar-percussively-enrique.ngrok-free.app`);
+    console.log(`🚀 SERVIDOR WEB INICIADO: Escuchando en el puerto ${PORT}`);
     console.log(`======================================================`);
 });
