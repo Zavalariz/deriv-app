@@ -6,9 +6,9 @@ const app = express();
 const PORT = 3000; 
 
 // *************************************************************
-// CORRECCIÓN CLAVE: APP ID 116785 de 'Trader Solidario Dev'
+// NUEVO APP ID DETECTADO: 116786
 // *************************************************************
-const APP_ID = 116785; 
+const APP_ID = 116786; 
 const WS_URL = `wss://ws.binaryws.com/websockets/v3?app_id=${APP_ID}`;
 
 // Variables de estado globales
@@ -21,7 +21,7 @@ app.use(express.json());
 
 // 1. SERVIR EL FRONTEND (index.html)
 app.get('/', (req, res) => {
-    // Asegura que el archivo index.html se sirva desde la misma carpeta
+    // Esto se usa si se ejecuta localmente.
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
@@ -33,14 +33,12 @@ app.post('/api/connect', (req, res) => {
         return res.status(400).json({ status: 'error', message: 'Token API no proporcionado.' });
     }
 
-    // Cierra la conexión WS anterior si existe para empezar limpia
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.close();
     }
     contractResult = null;
     currentAuthToken = authToken; 
 
-    // Inicia una nueva conexión WS para la autenticación
     startWebSocketAuth(authToken, res);
 });
 
@@ -55,14 +53,12 @@ app.post('/api/trade', (req, res) => {
         return res.status(400).json({ status: 'error', message: 'Faltan parámetros de operación.' });
     }
     
-    // Inicia una nueva conexión WS para la operación de trading
     startWebSocketTrade(amount, duration, contractType, res);
 });
 
 
 // 4. ENDPOINT PARA OBTENER EL RESULTADO DEL CONTRATO
 app.get('/api/result', (req, res) => {
-    // Devuelve el resultado si está disponible, o null si aún no termina
     res.json({ result: contractResult });
 });
 
@@ -94,7 +90,6 @@ function startWebSocketAuth(authToken, httpResponse) {
             currentAccountId = authData.loginid;
             
             if (!httpResponseSent) {
-                // Envía la respuesta HTTP al frontend para indicar conexión exitosa
                 httpResponse.json({
                     status: 'success',
                     message: `Autenticación exitosa con ${currentAccountId}.`,
@@ -103,7 +98,6 @@ function startWebSocketAuth(authToken, httpResponse) {
                 });
                 httpResponseSent = true;
             }
-            // Cierra la conexión de autenticación
             ws.close(); 
         } 
     });
@@ -123,7 +117,7 @@ function startWebSocketAuth(authToken, httpResponse) {
 function startWebSocketTrade(amount, duration, contractType, httpResponse) {
     ws = new WebSocket(WS_URL);
     let tradeHttpResponseSent = false;
-    contractResult = null; // Limpia el resultado anterior para el nuevo trade
+    contractResult = null; 
 
     ws.on('open', function open() {
         ws.send(JSON.stringify({ authorize: currentAuthToken }));
@@ -143,10 +137,8 @@ function startWebSocketTrade(amount, duration, contractType, httpResponse) {
         }
 
         if (response.msg_type === 'authorize') {
-            // Una vez autorizado, envía las solicitudes de trading
             sendTradeRequests(ws, amount, duration, contractType);
             if (!tradeHttpResponseSent) {
-                // Envía la respuesta HTTP al frontend para iniciar el polling
                 httpResponse.json({ status: 'success', message: 'Trade iniciado.' });
                 tradeHttpResponseSent = true;
             }
@@ -161,7 +153,6 @@ function startWebSocketTrade(amount, duration, contractType, httpResponse) {
                  }
             } else {
                 console.log(`[BACKEND] 🎉 Compra Exitosa. ID Contrato: ${response.buy.contract_id}. Esperando resultado...`);
-                // Suscribe al contrato abierto para monitorear el resultado
                 ws.send(JSON.stringify({
                     "proposal_open_contract": 1,
                     "contract_id": response.buy.contract_id,
@@ -173,17 +164,14 @@ function startWebSocketTrade(amount, duration, contractType, httpResponse) {
         else if (response.msg_type === 'proposal_open_contract') {
             const contract = response.proposal_open_contract;
             
-            // Revisa si el contrato ha sido vendido (terminado)
             if (contract.is_sold === 1) {
                 const profit = contract.sell_price - contract.buy_price; 
                 const resultado = profit >= 0 ? 'GANANCIA' : 'PÉRDIDA';
                 
-                // Almacena el resultado para ser consultado por /api/result
                 contractResult = `🎯 RESULTADO FINAL:\n\n---\nCuenta: ${currentAccountId}\nTipo: ${contractType}\nMonto: $${contract.buy_price.toFixed(2)}\nResultado: ${resultado}\nGanancia/Pérdida Neta: ${profit.toFixed(2)} USD`;
 
                 console.log(`[BACKEND] --- RESULTADO: ${resultado} / $${profit.toFixed(2)} ---`);
                 
-                // Limpia suscripciones y cierra el WS
                 ws.send(JSON.stringify({ "forget_all": "ticks" }));
                 ws.send(JSON.stringify({ "forget": contract.id }));
                 ws.close();
@@ -203,14 +191,12 @@ function startWebSocketTrade(amount, duration, contractType, httpResponse) {
 
 // 7. FUNCIÓN DE SOLICITUD DE TRADING DINÁMICA
 function sendTradeRequests(ws, amount, duration, contractType) {
-    // Suscribe a los ticks del símbolo (Volatilidad 100)
     ws.send(JSON.stringify({ "ticks": "R_100", "subscribe": 1 }));
     console.log(`[BACKEND] ➡️ Solicitando ticks para ${contractType}.`);
     
-    // Envía la solicitud de compra a la API de Deriv
     const buyRequest = JSON.stringify({
         "buy": 1, 
-        "price": amount, // <-- Precio de compra (stake)
+        "price": amount, 
         "parameters": {
             "amount": amount, 
             "basis": "stake", 
