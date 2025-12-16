@@ -238,7 +238,7 @@
     <script src="https://unpkg.com/@deriv/deriv-chart-app@0.2.2/dist/main.js"></script>
 
     <script>
-        // **** CAMBIO CLAVE: VOLVEMOS A NULL para que funcione el login ****
+        // Variables globales
         let globalApiToken = null; 
         let isConnected = false;
         let pollingIntervalId = null; 
@@ -284,40 +284,38 @@
             window.location.replace(derivAuthUrl);
         }
 
-        // --- FUNCIÓN PRINCIPAL DE AUTENTICACIÓN Y CHECK DE TOKEN ---
+        // --- FUNCIÓN PRINCIPAL DE AUTENTICACIÓN Y CHECK DE TOKEN (CORREGIDA PARA ? Y #) ---
         function checkUrlAndStartSession() {
-            // Deriv devuelve el token en el 'hash' (#) de la URL
-            const hash = window.location.hash;
+            // 1. Intentar buscar en el HASH (#)
+            let params = new URLSearchParams(window.location.hash.substring(1));
+            let token = params.get('token') || params.get('token1'); 
 
-            if (hash) {
-                // Quitamos el # y parseamos los parámetros
-                const params = new URLSearchParams(hash.substring(1));
-                // Deriv usa 'token' o 'token1' si hay múltiples cuentas.
-                const token = params.get('token') || params.get('token1'); 
-            
-                if (token) {
-                    // Limpia el token de la URL para que no aparezca en la barra de direcciones
-                    history.replaceState({}, document.title, window.location.pathname);
-                    globalApiToken = token;
-                    
-                    const outputLogin = document.getElementById('outputLogin');
-                    outputLogin.textContent = "✅ Token de Deriv capturado. Intentando conexión al servidor...";
-                    outputLogin.style.borderLeftColor = '#00cc66';
+            // 2. Si no se encontró en el HASH, intentar buscar en los Parámetros de Consulta (?)
+            if (!token) {
+                params = new URLSearchParams(window.location.search);
+                token = params.get('token') || params.get('token1'); 
+            }
 
-                    // Llama al backend para autenticarse y obtener el saldo
-                    // NOTE: Esta parte fallará si no hay un servidor backend activo.
-                    // Si su servidor NO está activo, cambie 'authenticateBackend(token, outputLogin);'
-                    // por 'simulateBackendSuccess(token, outputLogin);' para probar solo el login.
-                    authenticateBackend(token, outputLogin); 
-                    
-                } else if (params.get('error')) {
-                    // Muestra errores si Deriv los devuelve
-                    document.getElementById('outputLogin').textContent = `❌ Error de Autenticación: ${params.get('error_description')}`;
+            if (token) {
+                // Limpia el token de la URL para que no aparezca en la barra de direcciones
+                window.history.replaceState({}, document.title, window.location.pathname);
+                globalApiToken = token;
+                
+                const outputLogin = document.getElementById('outputLogin');
+                outputLogin.textContent = "✅ Token de Deriv capturado. Intentando conexión al servidor...";
+                outputLogin.style.borderLeftColor = '#00cc66';
+
+                // Llama al backend para autenticarse y obtener el saldo
+                authenticateBackend(token, outputLogin);
+                
+            } else {
+                // Si no hay token en la URL, se muestra la vista de login.
+                // Comprobar si hay un error de OAUTH para mostrarlo
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('error')) {
+                    document.getElementById('outputLogin').textContent = `❌ Error de Autenticación: ${urlParams.get('error_description')}`;
                     document.getElementById('outputLogin').style.borderLeftColor = 'var(--color-red)';
                 }
-            } else {
-                // Si no hay token en la URL, muestra la vista de login
-                // (Nota: Quitamos hidden-view del loginView para que se muestre por defecto)
             }
         }
         
@@ -353,7 +351,7 @@
                 }
             })
             .catch(error => {
-                outputLogin.textContent = "❌ Error de conexión al servidor: " + error.message;
+                outputLogin.textContent = "❌ Error de conexión al servidor (Backend): " + error.message;
                 outputLogin.style.borderLeftColor = 'var(--color-red)';
             });
         }
